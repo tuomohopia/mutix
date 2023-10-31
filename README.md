@@ -19,3 +19,24 @@ Randomized with seed 957366
 ```
 
 May have to run `ExUnit.Server.modules_loaded(false)`.
+
+## Compilation
+
+- `Code.compile_string(..)` ja `Code.compile_quoted(..)` ylikirjoittaa jo
+  olemassa olevan moduulin päälle
+- use `Macro.to_string()` to convert the quoted, mutated line back to string
+
+## POC
+
+- Input: lib module file path & test file path
+- Creates a mutation of a single + operator to -
+- Runs the test file suite against the mutation, sending records to recorder
+- Repeats the above for every mutation
+- Result:
+  - File & Line changed
+  - how many test failures out of total
+  - Mutation Score
+  - at least 1 test needs to fail for each mutant
+  - Line-by-line analysis which mutant was not caught by any test
+
+### Development steps

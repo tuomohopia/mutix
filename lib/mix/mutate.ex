@@ -1,14 +1,105 @@
 defmodule Mix.Tasks.Mutate do
   @moduledoc """
-  Run with `mix mutate lib/filename.ex test/filename.exs`
+  Run with `MIX_ENV=test mix mutate lib/filename.ex test/filename.exs`
   """
 
   @shortdoc "Runs mutation tests for a given file and test suite."
 
+  @compile {:no_warn_undefined, [ExUnit, ExUnit.Filters]}
+
+  # @env_error_message "You need to run this command with MIX_ENV=test in order to run the test suite."
+
   use Mix.Task
 
+  @test_module """
+  defmodule Mutix do
+    def add_one(a) do
+      a - 1
+    end
+  end
+  """
+
   @impl Mix.Task
-  def run([source_file, test_file] = args) do
-    Mix.shell().info(Enum.join(args, " "))
+  # def run([source_file, test_file]) do
+  def run(_args) do
+    source_file = "lib/mutix.ex"
+    test_file = "test/mutix_test.exs"
+    # Initial checks
+
+    unless System.get_env("MIX_ENV") || Mix.env() == :test do
+      Mix.raise("""
+      "mix mutate" is running in the \"#{Mix.env()}\" environment. If you are \
+      running mutation tests from within another command, you can either:
+
+        1. set MIX_ENV explicitly:
+
+            MIX_ENV=test mix mutate
+
+        2. set the :preferred_envs for "def cli" in your mix.exs:
+
+            def cli do
+              [preferred_envs: ["mutate": :test]]
+            end
+      """)
+    end
+
+    unless File.exists?(source_file), do: Mix.raise("Source module file must exist")
+    unless File.exists?(test_file), do: Mix.raise("Test file must exist")
+    _ = Mix.Project.get!()
+
+    # Load ExUnit before we compile anything in case we are compiling
+    # helper modules that depend on ExUnit.
+    Application.ensure_loaded(:ex_unit)
+
+    Code.put_compiler_option(:ignore_module_conflict, true)
+    # Code.require_file(Path.join("test", "test_helper.exs"))
+    Mix.Task.run("compile", [])
+
+    # ad_hoc_module()
+
+    # Mix.Task.run("app.start", [])
+    # ExUnit.start(autorun: false)
+    # ExUnit.Server.modules_loaded(false)
+    # Code.required_files()
+    Code.unrequire_files([source_file])
+
+    # ExUnit.run([MutixTest])
+
+    IO.inspect(Mutix.add_one(5), label: "MutixOnlyForMix.add_one/1 before")
+    do_run(source_file)
+    IO.inspect(Mutix.add_one(5), label: "MutixOnlyForMix.add_one/1 after")
+    :ok
+  end
+
+  # Internal
+
+  defp do_run(source_file) do
+    # Get source file's quoted code
+    ast = source_file |> File.read!() |> Code.string_to_quoted!()
+    IO.inspect(ast)
+
+    new_ast =
+      Macro.prewalk(ast, fn node ->
+        case node do
+          {:+, meta, children} -> {:-, meta, children}
+          other -> other
+        end
+      end)
+
+    IO.inspect(new_ast)
+    Code.compile_quoted(new_ast)
+    # Get
+  end
+
+  defp ad_hoc_module do
+    # Code.compile_string(@test_module) |> IO.inspect(label: "inline compiled module")
+    # Code.eval_string(@test_module) |> IO.inspect(label: "evaluated")
+
+    # IO.inspect(Mutix.add_one(5), label: "MutixOnlyForMix.add_one/1 before")
+    quoted = Code.string_to_quoted!(@test_module)
+    # IO.inspect(quoted, label: "quoted")
+    Code.compile_quoted(quoted)
+    Code.ensure_compiled!(Mutix)
+    # IO.inspect(Mutix.add_one(5), label: "MutixOnlyForMix.add_one/1 after")
   end
 end

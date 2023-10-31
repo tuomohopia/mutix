@@ -7,12 +7,7 @@ defmodule Mutix.MixProject do
       version: "0.1.0",
       elixir: "~> 1.15",
       start_permanent: Mix.env() == :prod,
-      deps: deps(),
-      darwin: [
-        modules: [
-          {Mutix, []}
-        ]
-      ]
+      deps: deps()
     ]
   end
 
@@ -20,6 +15,15 @@ defmodule Mutix.MixProject do
   def application do
     [
       extra_applications: [:logger]
+    ]
+  end
+
+  def cli do
+    [
+      preferred_envs: [
+        mutate: :test,
+        custom_test: :test
+      ]
     ]
   end
 

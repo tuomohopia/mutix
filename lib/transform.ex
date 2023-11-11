@@ -5,16 +5,18 @@ defmodule Mutix.Transform do
   Takes in a module AST and
   generates a new AST per every mutation.
 
-  TODO:
-  # - operator to mutate as an input
+  Returns a tuple with metadata (line number) on the left
+  and transformed module AST on the right.
   """
-  def mutation_modules(module_ast) do
-    # 1. ( Analyze: Find all locations where the operator exists -> save location for quick lookups)
-
+  @spec mutation_modules(Macro.t(), {atom(), atom()}) :: list({Keyword.t(), Macro.t()})
+  def mutation_modules(module_ast, {from, to}) do
+    # Find all locations [[line: 3], ..] where `from` exists
+    # TODO: multi operator per line support with Macro.update_meta(..)
+    # -> put keyword here from acc, like `index_on_line: 0`
     {_new_ast, operator_location_metas} =
       Macro.prewalk(module_ast, [], fn
-        {:+, meta, children}, acc ->
-          {{:+, meta, children}, acc ++ [meta]}
+        {^from, meta, children}, acc ->
+          {{from, meta, children}, acc ++ [meta]}
 
         other, acc ->
           {other, acc}
@@ -26,18 +28,18 @@ defmodule Mutix.Transform do
     # - pass index to mutate_at_location
     # - reduce with prewalk/3 and keep tabs with the acc if mutated yet or not
     for meta <- Enum.uniq(operator_location_metas) do
-      mutated_module = mutate_at_location(module_ast, meta)
+      mutated_module = mutate_at_location(module_ast, meta, {from, to})
       {meta, mutated_module}
     end
   end
 
   # Internal
 
-  defp mutate_at_location(module_ast, meta) do
+  defp mutate_at_location(module_ast, meta, {from, to}) do
     Macro.prewalk(module_ast, fn node ->
       case node do
-        {:+, ^meta, children} ->
-          {:-, meta, children}
+        {^from, ^meta, children} ->
+          {to, meta, children}
 
         other ->
           other

@@ -77,13 +77,13 @@ defmodule Mix.Tasks.Mutate do
     # Get source file's AST
     ast = source_file |> File.read!() |> Code.string_to_quoted!()
 
-    # ( Analyze: Find all locations where the operator exists -> save location for quick lookups)
-
-    # Generate a list of new ASTs where every AST is the full module with a single mutation
-
-    mutated_module_asts = Transform.mutation_modules(ast)
+    mutated_module_asts = Transform.mutation_modules(ast, {:+, :-})
     IO.inspect(mutated_module_asts, label: "mutated module ASTs")
-    # Run tests against the AST -> report results
+
+    # Compile each transformed module & run tests against it
+    # Report number of failures to reporter or back here
+
+    # Once last AST tested, aggregate results
   end
 
   defp ad_hoc_module do

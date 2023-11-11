@@ -3,7 +3,7 @@ defmodule Mix.Tasks.Mutate do
   Run with `MIX_ENV=test mix mutate lib/filename.ex test/filename.exs`
   """
 
-  alias Mutix.Utils
+  alias Mutix.Transform
 
   @shortdoc "Runs mutation tests for a given file and test suite."
 
@@ -81,12 +81,9 @@ defmodule Mix.Tasks.Mutate do
 
     # Generate a list of new ASTs where every AST is the full module with a single mutation
 
-    mutated_module_asts = Utils.mutation_modules(ast)
+    mutated_module_asts = Transform.mutation_modules(ast)
+    IO.inspect(mutated_module_asts, label: "mutated module ASTs")
     # Run tests against the AST -> report results
-
-    # PER MUTATION: Transform AST with a single order mutation
-    # - Find first un-tested (un-mutated) node and mutate it
-    # - run
   end
 
   defp ad_hoc_module do

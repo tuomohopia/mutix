@@ -1,16 +1,11 @@
-defmodule Mutix.Utils do
+defmodule Mutix.Transform do
   @moduledoc false
 
   @doc """
   Takes in a module AST and
   generates a new AST per every mutation.
 
-
-  2. Generate a list of new ASTs where every AST is the full module with a single mutation
-  3.
-
   TODO:
-  # - recorded function as input
   # - operator to mutate as an input
   """
   def mutation_modules(module_ast) do
@@ -25,15 +20,23 @@ defmodule Mutix.Utils do
           {other, acc}
       end)
 
-    IO.inspect(operator_location_metas, label: "metas")
+    # Generate a list of new ASTs where every AST is the full module with a single mutation
+
+    # TODO: support for multiple identical operators per line
+    # - pass index to mutate_at_location
+    # - reduce with prewalk/3 and keep tabs with the acc if mutated yet or not
+    for meta <- Enum.uniq(operator_location_metas) do
+      mutated_module = mutate_at_location(module_ast, meta)
+      {meta, mutated_module}
+    end
   end
 
-  # OLD
+  # Internal
 
-  defp prewalker(module_ast) do
+  defp mutate_at_location(module_ast, meta) do
     Macro.prewalk(module_ast, fn node ->
       case node do
-        {:+, meta, children} ->
+        {:+, ^meta, children} ->
           {:-, meta, children}
 
         other ->

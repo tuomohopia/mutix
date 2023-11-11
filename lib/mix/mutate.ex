@@ -3,6 +3,8 @@ defmodule Mix.Tasks.Mutate do
   Run with `MIX_ENV=test mix mutate lib/filename.ex test/filename.exs`
   """
 
+  alias Mutix.Utils
+
   @shortdoc "Runs mutation tests for a given file and test suite."
 
   @compile {:no_warn_undefined, [ExUnit, ExUnit.Filters]}
@@ -55,8 +57,6 @@ defmodule Mix.Tasks.Mutate do
     # Code.require_file(Path.join("test", "test_helper.exs"))
     Mix.Task.run("compile", [])
 
-    # ad_hoc_module()
-
     # Mix.Task.run("app.start", [])
     # ExUnit.start(autorun: false)
     # ExUnit.Server.modules_loaded(false)
@@ -74,21 +74,19 @@ defmodule Mix.Tasks.Mutate do
   # Internal
 
   defp do_run(source_file) do
-    # Get source file's quoted code
+    # Get source file's AST
     ast = source_file |> File.read!() |> Code.string_to_quoted!()
-    IO.inspect(ast)
 
-    new_ast =
-      Macro.prewalk(ast, fn node ->
-        case node do
-          {:+, meta, children} -> {:-, meta, children}
-          other -> other
-        end
-      end)
+    # ( Analyze: Find all locations where the operator exists -> save location for quick lookups)
 
-    IO.inspect(new_ast)
-    Code.compile_quoted(new_ast)
-    # Get
+    # Generate a list of new ASTs where every AST is the full module with a single mutation
+
+    mutated_module_asts = Utils.mutation_modules(ast)
+    # Run tests against the AST -> report results
+
+    # PER MUTATION: Transform AST with a single order mutation
+    # - Find first un-tested (un-mutated) node and mutate it
+    # - run
   end
 
   defp ad_hoc_module do

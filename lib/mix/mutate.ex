@@ -5,7 +5,6 @@ defmodule Mix.Tasks.Mutate do
 
   alias Mutix.Test
   alias Mutix.Transform
-  alias Mix.Compilers.Test, as: CT
 
   @shortdoc "Runs mutation tests for a given file and test suite."
 
@@ -26,22 +25,10 @@ defmodule Mix.Tasks.Mutate do
         end
   """
 
-  # @env_error_message "You need to run this command with MIX_ENV=test in order to run the test suite."
-
   use Mix.Task
 
-  @test_module """
-  defmodule Mutix do
-    def add_one(a) do
-      a - 1
-    end
-  end
-  """
-
   @impl Mix.Task
-  # def run([source_file, test_file]) do
-  def run(_args) do
-    source_file = "lib/mutix.ex"
+  def run([source_file]) do
     test_file = "test/mutix_test.exs"
     # Initial checks
 
@@ -58,62 +45,62 @@ defmodule Mix.Tasks.Mutate do
     # helper modules that depend on ExUnit.
     Application.ensure_loaded(:ex_unit)
     Code.put_compiler_option(:ignore_module_conflict, true)
-    # Kernel.ParallelCompiler.require(["test/mutix_test.exs", "test/test_helper.exs"], [])
     ExUnit.start(autorun: false)
-    # Kernel.ParallelCompiler.require(["test/mutix_test.exs"], [])
     Mix.Task.run("compile", [])
     # Mix.Task.run("app.start", [])
-    # ExUnit.Server.modules_loaded(false)
     Code.unrequire_files([source_file])
-
-    ExUnit.after_suite(fn result ->
-      nil
-    end)
-
-    # ExUnit.configure(ExUnit.configuration())
 
     shell = Mix.shell()
     test_paths = project[:test_paths] || default_test_paths()
     Enum.each(test_paths, &require_test_helper(shell, &1))
 
-    # IO.inspect(Mutix.add_one(5), label: "MutixOnlyForMix.add_one/1 before")
-    do_run(source_file, test_file)
-    # IO.inspect(Mutix.add_one(5), label: "MutixOnlyForMix.add_one/1 after")
+    # TODO:
+    # - get test files properly
+    do_run(source_file, [test_file])
     :ok
   end
 
+  def run(_),
+    do:
+      Mix.raise(
+        "Please provide path to the source file to mutate, e.g. `mix mutate lib/my_app/transformer.ex`"
+      )
+
   # Internal
 
-  defp do_run(source_file, test_file) do
+  defp do_run(source_file, test_files) do
     # Get source file's AST
     ast = source_file |> File.read!() |> Code.string_to_quoted!()
+    {:ok, test_modules, []} = Kernel.ParallelCompiler.require(test_files, [])
+
+    ExUnit.Server.modules_loaded(false)
+    # One clean run first to assert all tests pass
+    ExUnit.CaptureIO.with_io(fn ->
+      case CustomExUnit.run() do
+        %{failures: 0} ->
+          :ok
+
+        %{failures: failures} ->
+          Mix.raise(
+            "Test suite has #{failures} failures without mutations. All tests need to pass before mutation suite can be run."
+          )
+      end
+    end)
 
     test_results =
       for {meta, ast} <- Transform.mutation_modules(ast, {:+, :-}) do
-        task = ExUnit.async_run()
-
-        Kernel.ParallelCompiler.require(["test/mutix_test.exs"], [])
-        |> IO.inspect(label: "parallelcompiler")
-
-        ExUnit.Server.modules_loaded(false)
         Code.compile_quoted(ast)
 
         {result, io_output} =
           ExUnit.CaptureIO.with_io(fn ->
-            CustomExUnit.run([MutixTest])
-            # ExUnit.await_run(task)
+            CustomExUnit.run(test_modules)
           end)
 
-        Code.unrequire_files([test_file])
-        result
+        Code.unrequire_files(test_files)
+        {result, meta, io_output}
       end
 
-    IO.inspect(test_results, label: "test_results")
-
-    # Compile each transformed module & run tests against it
-    # Report number of failures to reporter or back here
-
-    # Once last AST tested, aggregate results
+    mutation_score = Test.mutation_score(test_results)
   end
 
   defp require_test_helper(shell, dir) do
@@ -140,11 +127,5 @@ defmodule Mix.Tasks.Mutate do
     else
       []
     end
-  end
-
-  defp ad_hoc_module do
-    quoted = Code.string_to_quoted!(@test_module)
-    Code.compile_quoted(quoted)
-    Code.ensure_compiled!(Mutix)
   end
 end

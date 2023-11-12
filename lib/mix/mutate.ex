@@ -3,11 +3,28 @@ defmodule Mix.Tasks.Mutate do
   Run with `MIX_ENV=test mix mutate lib/filename.ex test/filename.exs`
   """
 
+  alias Mutix.Test
   alias Mutix.Transform
+  alias Mix.Compilers.Test, as: CT
 
   @shortdoc "Runs mutation tests for a given file and test suite."
 
   @compile {:no_warn_undefined, [ExUnit, ExUnit.Filters]}
+
+  @mix_env_error """
+  "mix mutate" is running in the \"#{Mix.env()}\" environment. If you are \
+  running mutation tests from within another command, you can either:
+
+    1. set MIX_ENV explicitly:
+
+        MIX_ENV=test mix mutate
+
+    2. set the :preferred_envs for "def cli" in your mix.exs:
+
+        def cli do
+          [preferred_envs: ["mutate": :test]]
+        end
+  """
 
   # @env_error_message "You need to run this command with MIX_ENV=test in order to run the test suite."
 
@@ -29,56 +46,59 @@ defmodule Mix.Tasks.Mutate do
     # Initial checks
 
     unless System.get_env("MIX_ENV") || Mix.env() == :test do
-      Mix.raise("""
-      "mix mutate" is running in the \"#{Mix.env()}\" environment. If you are \
-      running mutation tests from within another command, you can either:
-
-        1. set MIX_ENV explicitly:
-
-            MIX_ENV=test mix mutate
-
-        2. set the :preferred_envs for "def cli" in your mix.exs:
-
-            def cli do
-              [preferred_envs: ["mutate": :test]]
-            end
-      """)
+      Mix.raise(@mix_env_error)
     end
 
     unless File.exists?(source_file), do: Mix.raise("Source module file must exist")
     unless File.exists?(test_file), do: Mix.raise("Test file must exist")
     _ = Mix.Project.get!()
+    project = Mix.Project.config()
 
     # Load ExUnit before we compile anything in case we are compiling
     # helper modules that depend on ExUnit.
     Application.ensure_loaded(:ex_unit)
-
     Code.put_compiler_option(:ignore_module_conflict, true)
-    # Code.require_file(Path.join("test", "test_helper.exs"))
+    # Kernel.ParallelCompiler.require(["test/mutix_test.exs", "test/test_helper.exs"], [])
+    ExUnit.start(autorun: false)
+    Kernel.ParallelCompiler.require(["test/mutix_test.exs"], [])
     Mix.Task.run("compile", [])
-
     # Mix.Task.run("app.start", [])
-    # ExUnit.start(autorun: false)
-    # ExUnit.Server.modules_loaded(false)
-    # Code.required_files()
+    ExUnit.Server.modules_loaded(false)
     Code.unrequire_files([source_file])
 
-    # ExUnit.run([MutixTest])
+    ExUnit.configure(ExUnit.configuration())
 
-    IO.inspect(Mutix.add_one(5), label: "MutixOnlyForMix.add_one/1 before")
-    do_run(source_file)
-    IO.inspect(Mutix.add_one(5), label: "MutixOnlyForMix.add_one/1 after")
+    shell = Mix.shell()
+    test_paths = project[:test_paths] || default_test_paths()
+    Enum.each(test_paths, &require_test_helper(shell, &1))
+
+    # IO.inspect(Mutix.add_one(5), label: "MutixOnlyForMix.add_one/1 before")
+    do_run(source_file, test_file)
+    # IO.inspect(Mutix.add_one(5), label: "MutixOnlyForMix.add_one/1 after")
     :ok
   end
 
   # Internal
 
-  defp do_run(source_file) do
+  defp do_run(source_file, test_file) do
     # Get source file's AST
     ast = source_file |> File.read!() |> Code.string_to_quoted!()
 
-    mutated_module_asts = Transform.mutation_modules(ast, {:+, :-})
-    IO.inspect(mutated_module_asts, label: "mutated module ASTs")
+    test_results =
+      for {meta, ast} <- Transform.mutation_modules(ast, {:+, :-}) do
+        Code.compile_quoted(ast)
+
+        {result, _io_output} =
+          ExUnit.CaptureIO.with_io(fn ->
+            task = ExUnit.async_run()
+            ExUnit.await_run(task)
+          end)
+
+        Code.unrequire_files([test_file])
+        result
+      end
+
+    IO.inspect(test_results, label: "test_results")
 
     # Compile each transformed module & run tests against it
     # Report number of failures to reporter or back here
@@ -86,15 +106,35 @@ defmodule Mix.Tasks.Mutate do
     # Once last AST tested, aggregate results
   end
 
-  defp ad_hoc_module do
-    # Code.compile_string(@test_module) |> IO.inspect(label: "inline compiled module")
-    # Code.eval_string(@test_module) |> IO.inspect(label: "evaluated")
+  defp require_test_helper(shell, dir) do
+    file = Path.join(dir, "test_helper.exs")
 
-    # IO.inspect(Mutix.add_one(5), label: "MutixOnlyForMix.add_one/1 before")
+    if File.exists?(file) do
+      Code.require_file(file)
+    else
+      raise_with_shell(
+        shell,
+        "Cannot run tests because test helper file #{inspect(file)} does not exist"
+      )
+    end
+  end
+
+  defp raise_with_shell(shell, message) do
+    Mix.shell(shell)
+    Mix.raise(message)
+  end
+
+  defp default_test_paths do
+    if File.dir?("test") do
+      ["test"]
+    else
+      []
+    end
+  end
+
+  defp ad_hoc_module do
     quoted = Code.string_to_quoted!(@test_module)
-    # IO.inspect(quoted, label: "quoted")
     Code.compile_quoted(quoted)
     Code.ensure_compiled!(Mutix)
-    # IO.inspect(Mutix.add_one(5), label: "MutixOnlyForMix.add_one/1 after")
   end
 end

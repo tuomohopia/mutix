@@ -36,14 +36,12 @@ defmodule Mutix.Transform do
   # Internal
 
   defp mutate_at_location(module_ast, meta, {from, to}) do
-    Macro.prewalk(module_ast, fn node ->
-      case node do
-        {^from, ^meta, children} ->
-          {to, meta, children}
+    Macro.prewalk(module_ast, fn
+      {^from, ^meta, children} ->
+        {to, meta, children}
 
-        other ->
-          other
-      end
+      other ->
+        other
     end)
   end
 end

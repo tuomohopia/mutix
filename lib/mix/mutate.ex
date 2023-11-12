@@ -60,13 +60,17 @@ defmodule Mix.Tasks.Mutate do
     Code.put_compiler_option(:ignore_module_conflict, true)
     # Kernel.ParallelCompiler.require(["test/mutix_test.exs", "test/test_helper.exs"], [])
     ExUnit.start(autorun: false)
-    Kernel.ParallelCompiler.require(["test/mutix_test.exs"], [])
+    # Kernel.ParallelCompiler.require(["test/mutix_test.exs"], [])
     Mix.Task.run("compile", [])
     # Mix.Task.run("app.start", [])
-    ExUnit.Server.modules_loaded(false)
+    # ExUnit.Server.modules_loaded(false)
     Code.unrequire_files([source_file])
 
-    ExUnit.configure(ExUnit.configuration())
+    ExUnit.after_suite(fn result ->
+      nil
+    end)
+
+    # ExUnit.configure(ExUnit.configuration())
 
     shell = Mix.shell()
     test_paths = project[:test_paths] || default_test_paths()
@@ -86,12 +90,18 @@ defmodule Mix.Tasks.Mutate do
 
     test_results =
       for {meta, ast} <- Transform.mutation_modules(ast, {:+, :-}) do
+        task = ExUnit.async_run()
+
+        Kernel.ParallelCompiler.require(["test/mutix_test.exs"], [])
+        |> IO.inspect(label: "parallelcompiler")
+
+        ExUnit.Server.modules_loaded(false)
         Code.compile_quoted(ast)
 
-        {result, _io_output} =
+        {result, io_output} =
           ExUnit.CaptureIO.with_io(fn ->
-            task = ExUnit.async_run()
-            ExUnit.await_run(task)
+            CustomExUnit.run([MutixTest])
+            # ExUnit.await_run(task)
           end)
 
         Code.unrequire_files([test_file])

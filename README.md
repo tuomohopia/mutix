@@ -40,3 +40,8 @@ May have to run `ExUnit.Server.modules_loaded(false)`.
   - Line-by-line analysis which mutant was not caught by any test
 
 ### Development steps
+
+### Problems
+
+Run ExUnit multiple times:
+https://stackoverflow.com/questions/36926388/how-can-i-avoid-the-warning-redefining-module-foo-when-running-exunit-tests-m

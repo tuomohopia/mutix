@@ -3,17 +3,7 @@ defmodule Mutix.Report do
 
   @typep mutation_test_result :: {result :: map(), meta :: Keyword.t(), io_output :: String.t()}
 
-  @doc """
-  Lists detailed results of each test:
-  - what was mutated and on which line
-    - "Second + operator on line 7 was mutated to -."
-  - Exunit's colorized assertion.
-  """
-  @spec detailed_results(list(mutation_test_result())) :: nil
-  def detailed_results(test_results) do
-  end
-
-  @spec mutation(list(mutation_test_result()), String.t(), {atom(), atom()}) :: nil
+  @spec mutation(list(mutation_test_result()), String.t(), {atom(), atom()}) :: String.t()
   def mutation(test_results, source_file_path, operator_mutation) do
     {from, to} = operator_mutation
     score = mutation_score(test_results)

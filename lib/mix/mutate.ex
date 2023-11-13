@@ -59,9 +59,7 @@ defmodule Mix.Tasks.Mutate do
     Enum.each(test_paths, &require_test_helper(shell, &1))
 
     # Finally parse, require and load the files
-    test_elixirc_options = project[:test_elixirc_options] || []
     test_pattern = project[:test_pattern] || "*_test.exs"
-    warn_test_pattern = project[:warn_test_pattern] || "*_test.ex"
 
     matched_test_files =
       []
@@ -70,9 +68,7 @@ defmodule Mix.Tasks.Mutate do
 
     if Enum.empty?(matched_test_files), do: Mix.raise("No ExUnit test files found.")
 
-    do_run(source_file, matched_test_files)
-    # |> Enum.map(fn {result, _meta, _input} -> result end)
-    |> IO.inspect()
+    do_run(source_file, matched_test_files, {:+, :-})
   end
 
   def run(_),
@@ -83,7 +79,7 @@ defmodule Mix.Tasks.Mutate do
 
   # Internal
 
-  defp do_run(source_file, test_files) do
+  defp do_run(source_file, test_files, mutation) do
     # Get source file's AST
     ast = source_file |> File.read!() |> Code.string_to_quoted!()
     {:ok, test_modules, []} = Kernel.ParallelCompiler.require(test_files, [])
@@ -104,7 +100,7 @@ defmodule Mix.Tasks.Mutate do
 
     # TODO: put operator to its own map/config, allow configuring via cmd line opts
     test_results =
-      for {meta, ast} <- Transform.mutation_modules(ast, {:+, :-}) do
+      for {meta, ast} <- Transform.mutation_modules(ast, mutation) do
         Code.compile_quoted(ast)
 
         {result, io_output} =
@@ -125,7 +121,6 @@ defmodule Mix.Tasks.Mutate do
     #   - How many mutants survived
     #   - Score
 
-    # exunit_report = Report.detailed_results(test_results)
     mutation_report = Report.mutation(test_results, source_file, {:+, :-})
     IO.puts(mutation_report)
   end
@@ -174,11 +169,5 @@ defmodule Mix.Tasks.Mutate do
     else
       files
     end
-  end
-
-  defp filter_to_allowed_files(matched_test_files, nil), do: matched_test_files
-
-  defp filter_to_allowed_files(matched_test_files, %MapSet{} = allowed_files) do
-    Enum.filter(matched_test_files, &MapSet.member?(allowed_files, Path.expand(&1)))
   end
 end

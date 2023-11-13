@@ -3,8 +3,13 @@ defmodule Mix.Tasks.Mutate do
   Run with `MIX_ENV=test mix mutate lib/filename.ex test/filename.exs`
   """
 
-  alias Mutix.Test
+  alias Mutix.Report
   alias Mutix.Transform
+
+  @mutation_operators %{
+    "plus_to_minus" => {:+, :-},
+    "minus_to_plus" => {:-, :+}
+  }
 
   @shortdoc "Runs mutation tests for a given file and test suite."
 
@@ -29,15 +34,14 @@ defmodule Mix.Tasks.Mutate do
 
   @impl Mix.Task
   def run([source_file]) do
-    test_file = "test/mutix_test.exs"
     # Initial checks
 
     unless System.get_env("MIX_ENV") || Mix.env() == :test do
       Mix.raise(@mix_env_error)
     end
 
-    unless File.exists?(source_file), do: Mix.raise("Source module file must exist")
-    unless File.exists?(test_file), do: Mix.raise("Test file must exist")
+    if Mix.Task.recursing?(), do: Mix.raise("Umbrella apps not supported yet.")
+    unless File.exists?(source_file), do: Mix.raise("Source module file must exist.")
     _ = Mix.Project.get!()
     project = Mix.Project.config()
 
@@ -54,16 +58,27 @@ defmodule Mix.Tasks.Mutate do
     test_paths = project[:test_paths] || default_test_paths()
     Enum.each(test_paths, &require_test_helper(shell, &1))
 
-    # TODO:
-    # - get test files properly
-    do_run(source_file, [test_file])
-    :ok
+    # Finally parse, require and load the files
+    test_elixirc_options = project[:test_elixirc_options] || []
+    test_pattern = project[:test_pattern] || "*_test.exs"
+    warn_test_pattern = project[:warn_test_pattern] || "*_test.ex"
+
+    matched_test_files =
+      []
+      |> parse_files(shell, test_paths)
+      |> Mix.Utils.extract_files(test_pattern)
+
+    if Enum.empty?(matched_test_files), do: Mix.raise("No ExUnit test files found.")
+
+    do_run(source_file, matched_test_files)
+    # |> Enum.map(fn {result, _meta, _input} -> result end)
+    |> IO.inspect()
   end
 
   def run(_),
     do:
       Mix.raise(
-        "Please provide path to the source file to mutate, e.g. `mix mutate lib/my_app/transformer.ex`"
+        "Please provide path to the source file to mutate, e.g. `mix mutate lib/my_app/transformer.ex`. Other options unsupported at this time."
       )
 
   # Internal
@@ -87,6 +102,7 @@ defmodule Mix.Tasks.Mutate do
       end
     end)
 
+    # TODO: put operator to its own map/config, allow configuring via cmd line opts
     test_results =
       for {meta, ast} <- Transform.mutation_modules(ast, {:+, :-}) do
         Code.compile_quoted(ast)
@@ -100,7 +116,18 @@ defmodule Mix.Tasks.Mutate do
         {result, meta, io_output}
       end
 
-    mutation_score = Test.mutation_score(test_results)
+    # REPORT:
+    # - Which mutation operator was used?
+    # - How many mutations were generated?
+    # - How many tests were run against each mutant?
+    # - Mutation Score
+    #   - How many mutants caught
+    #   - How many mutants survived
+    #   - Score
+
+    # exunit_report = Report.detailed_results(test_results)
+    mutation_report = Report.mutation(test_results, source_file, {:+, :-})
+    IO.puts(mutation_report)
   end
 
   defp require_test_helper(shell, dir) do
@@ -127,5 +154,31 @@ defmodule Mix.Tasks.Mutate do
     else
       []
     end
+  end
+
+  defp parse_files([], _shell, test_paths) do
+    test_paths
+  end
+
+  defp parse_files([single_file], _shell, _test_paths) do
+    # Check if the single file path matches test/path/to_test.exs:123. If it does,
+    # apply "--only line:123" and trim the trailing :123 part.
+    {single_file, opts} = ExUnit.Filters.parse_path(single_file)
+    ExUnit.configure(opts)
+    [single_file]
+  end
+
+  defp parse_files(files, shell, _test_paths) do
+    if Enum.any?(files, &match?({_, [_ | _]}, ExUnit.Filters.parse_path(&1))) do
+      raise_with_shell(shell, "Line numbers can only be used when running a single test file")
+    else
+      files
+    end
+  end
+
+  defp filter_to_allowed_files(matched_test_files, nil), do: matched_test_files
+
+  defp filter_to_allowed_files(matched_test_files, %MapSet{} = allowed_files) do
+    Enum.filter(matched_test_files, &MapSet.member?(allowed_files, Path.expand(&1)))
   end
 end

@@ -55,6 +55,9 @@ Run `mix help mutate` to see instructions on how to use the tool.
 - `--to` - which operator should the target operator be mutated to in the source
   file
 
+If `--from` and `--to` are not defined, `--from` defaults to `+` and `--to` to
+`-`.
+
 ### Examples
 
 ```bash

@@ -11,11 +11,6 @@ defmodule Mix.Tasks.Mutate do
   # - parse cmd line options properly; add --operator instructions
   # - add no mutations case report (no operators to mutate in the source found)
 
-  @mutation_operators %{
-    "plus_to_minus" => {:+, :-},
-    "minus_to_plus" => {:-, :+}
-  }
-
   @shortdoc "Runs mutation tests for a given file and test suite."
 
   @compile {:no_warn_undefined, [ExUnit, ExUnit.Filters]}
@@ -92,7 +87,7 @@ defmodule Mix.Tasks.Mutate do
     ExUnit.Server.modules_loaded(false)
     # One clean run first to assert all tests pass
     ExUnit.CaptureIO.with_io(fn ->
-      case CustomExUnit.run() do
+      case ExUnit.run() do
         %{failures: 0} ->
           :ok
 
@@ -109,7 +104,7 @@ defmodule Mix.Tasks.Mutate do
 
         {result, io_output} =
           ExUnit.CaptureIO.with_io(fn ->
-            CustomExUnit.run(test_modules)
+            ExUnit.run(test_modules)
           end)
 
         Code.unrequire_files(test_files)

@@ -47,6 +47,8 @@ automatically compiled.
 mix mutate lib/parser.ex
 ```
 
+Run `mix help mutate` to see instructions on how to use the tool.
+
 ### Command line options
 
 - `--from` - which target operator to mutate

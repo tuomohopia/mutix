@@ -6,10 +6,10 @@ defmodule Mix.Tasks.Mutate do
   alias Mutix.Report
   alias Mutix.Transform
 
-  @mutation_operators %{
-    "plus_to_minus" => {:+, :-},
-    "minus_to_plus" => {:-, :+}
-  }
+  # TODO:
+  # - documentation for mix task
+  # - parse cmd line options properly; add --operator instructions
+  # - add no mutations case report (no operators to mutate in the source found)
 
   @shortdoc "Runs mutation tests for a given file and test suite."
 
@@ -87,7 +87,7 @@ defmodule Mix.Tasks.Mutate do
     ExUnit.Server.modules_loaded(false)
     # One clean run first to assert all tests pass
     ExUnit.CaptureIO.with_io(fn ->
-      case CustomExUnit.run() do
+      case ExUnit.run() do
         %{failures: 0} ->
           :ok
 
@@ -98,14 +98,13 @@ defmodule Mix.Tasks.Mutate do
       end
     end)
 
-    # TODO: put operator to its own map/config, allow configuring via cmd line opts
     test_results =
       for {meta, ast} <- Transform.mutation_modules(ast, mutation) do
         Code.compile_quoted(ast)
 
         {result, io_output} =
           ExUnit.CaptureIO.with_io(fn ->
-            CustomExUnit.run(test_modules)
+            ExUnit.run(test_modules)
           end)
 
         Code.unrequire_files(test_files)
@@ -121,8 +120,19 @@ defmodule Mix.Tasks.Mutate do
     #   - How many mutants survived
     #   - Score
 
-    mutation_report = Report.mutation(test_results, source_file, {:+, :-})
-    IO.puts(mutation_report)
+    if Enum.empty?(test_results) do
+      {from, _to} = mutation
+
+      IO.puts("""
+
+      No ( #{from} ) operators found in #{source_file}.
+      Thus, no mutants injected.
+
+      """)
+    else
+      mutation_report = Report.mutation(test_results, source_file, {:+, :-})
+      IO.puts(mutation_report)
+    end
   end
 
   defp require_test_helper(shell, dir) do

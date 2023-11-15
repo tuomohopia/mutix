@@ -54,7 +54,13 @@ defmodule Mutix.Report do
     surviving =
       for {_, meta, _} <- survived do
         line = Keyword.fetch!(meta, :line)
-        "#{source_file_path} - line #{line} where ( #{from} ) was mutated into ( #{to} )"
+        index = Keyword.fetch!(meta, :index_on_line)
+
+        if index == 0 do
+          "#{source_file_path} - line #{line} where ( #{from} ) was mutated into ( #{to} )"
+        else
+          "#{source_file_path} - line #{line} where the #{index + 1}. ( #{from} ) from left was mutated into ( #{to} )"
+        end
       end
 
     """

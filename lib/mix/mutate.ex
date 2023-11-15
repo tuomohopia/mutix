@@ -15,6 +15,59 @@ defmodule Mix.Tasks.Mutate do
 
   @compile {:no_warn_undefined, [ExUnit, ExUnit.Filters]}
 
+  @operators %{
+    "+" => :+,
+    "-" => :-,
+    "*" => :*,
+    "/" => :/,
+    "and" => :and,
+    "not" => :not,
+    "&&" => :&&,
+    "||" => :||,
+    ">" => :>,
+    ">=" => :>=,
+    "<" => :<,
+    "<=" => :<=,
+    "==" => :==,
+    "!=" => :!=
+  }
+
+  @switches [
+    # From Mix Test
+    all_warnings: :boolean,
+    force: :boolean,
+    color: :boolean,
+    cover: :boolean,
+    export_coverage: :string,
+    trace: :boolean,
+    max_cases: :integer,
+    max_failures: :integer,
+    include: :keep,
+    exclude: :keep,
+    seed: :integer,
+    only: :keep,
+    compile: :boolean,
+    start: :boolean,
+    timeout: :integer,
+    raise: :boolean,
+    deps_check: :boolean,
+    archives_check: :boolean,
+    elixir_version_check: :boolean,
+    failed: :boolean,
+    stale: :boolean,
+    listen_on_stdin: :boolean,
+    formatter: :keep,
+    slowest: :integer,
+    partitions: :integer,
+    preload_modules: :boolean,
+    warnings_as_errors: :boolean,
+    profile_require: :string,
+    exit_status: :integer,
+    # Custom
+    from: :string,
+    to: :string
+  ]
+
   @mix_env_error """
   "mix mutate" is running in the \"#{Mix.env()}\" environment. If you are \
   running mutation tests from within another command, you can either:
@@ -33,8 +86,36 @@ defmodule Mix.Tasks.Mutate do
   use Mix.Task
 
   @impl Mix.Task
-  def run([source_file]) do
+  def run(args) do
+    {opts, source_files} = OptionParser.parse!(args, strict: @switches)
+
+    from = Keyword.get(opts, :from, "+")
+    to = Keyword.get(opts, :to, "-")
+
+    operators = Map.keys(@operators)
+
+    unless from in operators and to in operators,
+      do:
+        Mix.raise(
+          "Both from and to mutation operators have to be within the allowed operators: #{Enum.join(operators, ", ")}."
+        )
+
+    operators = {Map.fetch!(@operators, from), Map.fetch!(@operators, to)}
+
     # Initial checks
+
+    source_file_count = Enum.count(source_files)
+
+    if source_file_count == 0,
+      do:
+        Mix.raise(
+          "Please provide path to the source file to mutate, e.g. `mix mutate lib/my_app/transformer.ex`. Other options unsupported at this time."
+        )
+
+    if source_file_count > 1,
+      do: Mix.raise("Only one source file supported at this time.")
+
+    source_file = List.first(source_files)
 
     unless System.get_env("MIX_ENV") || Mix.env() == :test do
       Mix.raise(@mix_env_error)
@@ -68,14 +149,8 @@ defmodule Mix.Tasks.Mutate do
 
     if Enum.empty?(matched_test_files), do: Mix.raise("No ExUnit test files found.")
 
-    do_run(source_file, matched_test_files, {:+, :-})
+    do_run(source_file, matched_test_files, operators)
   end
-
-  def run(_),
-    do:
-      Mix.raise(
-        "Please provide path to the source file to mutate, e.g. `mix mutate lib/my_app/transformer.ex`. Other options unsupported at this time."
-      )
 
   # Internal
 
@@ -130,7 +205,7 @@ defmodule Mix.Tasks.Mutate do
 
       """)
     else
-      mutation_report = Report.mutation(test_results, source_file, {:+, :-})
+      mutation_report = Report.mutation(test_results, source_file, mutation)
       IO.puts(mutation_report)
     end
   end

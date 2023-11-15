@@ -44,37 +44,6 @@ defmodule Mix.Tasks.Mutate do
   }
 
   @switches [
-    # From Mix Test
-    all_warnings: :boolean,
-    force: :boolean,
-    color: :boolean,
-    cover: :boolean,
-    export_coverage: :string,
-    trace: :boolean,
-    max_cases: :integer,
-    max_failures: :integer,
-    include: :keep,
-    exclude: :keep,
-    seed: :integer,
-    only: :keep,
-    compile: :boolean,
-    start: :boolean,
-    timeout: :integer,
-    raise: :boolean,
-    deps_check: :boolean,
-    archives_check: :boolean,
-    elixir_version_check: :boolean,
-    failed: :boolean,
-    stale: :boolean,
-    listen_on_stdin: :boolean,
-    formatter: :keep,
-    slowest: :integer,
-    partitions: :integer,
-    preload_modules: :boolean,
-    warnings_as_errors: :boolean,
-    profile_require: :string,
-    exit_status: :integer,
-    # Custom
     from: :string,
     to: :string
   ]

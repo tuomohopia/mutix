@@ -1,15 +1,26 @@
 defmodule Mix.Tasks.Mutate do
-  @moduledoc """
-  Run with `MIX_ENV=test mix mutate lib/filename.ex test/filename.exs`
+  @moduledoc ~S"""
+  Run with `mix mutate lib/parser.ex` where the first argument
+  is the source file to mutate.
+
+  This generates a so called single-order mutation for every `--from` operator
+  found in the source code file. In essence, a version of the app is created
+  for every operator to be mutated is found, and the test suite is run against it.
+
+  To configure which operator to mutate to which, use
+  `--from` and `--to` command line arguments:
+
+      $ mix mutate lib/parser.ex --from + --to -
+      $ mix mutate lib/parser.ex --from and --to not
+      $ mix mutate lib/parser.ex --from ">" --to "<"
+
   """
 
   alias Mutix.Report
   alias Mutix.Transform
 
   # TODO:
-  # - documentation for mix task
-  # - parse cmd line options properly; add --operator instructions
-  # - add no mutations case report (no operators to mutate in the source found)
+  # - add instructions on how to read the test results
 
   @shortdoc "Runs mutation tests for a given file and test suite."
 
@@ -186,28 +197,21 @@ defmodule Mix.Tasks.Mutate do
         {result, meta, io_output}
       end
 
-    # REPORT:
-    # - Which mutation operator was used?
-    # - How many mutations were generated?
-    # - How many tests were run against each mutant?
-    # - Mutation Score
-    #   - How many mutants caught
-    #   - How many mutants survived
-    #   - Score
+    mutation_report =
+      if Enum.empty?(test_results) do
+        {from, _to} = mutation
 
-    if Enum.empty?(test_results) do
-      {from, _to} = mutation
+        """
 
-      IO.puts("""
+        No ( #{from} ) operators found in #{source_file}.
+        Thus, no mutants injected.
 
-      No ( #{from} ) operators found in #{source_file}.
-      Thus, no mutants injected.
+        """
+      else
+        Report.mutation(test_results, source_file, mutation)
+      end
 
-      """)
-    else
-      mutation_report = Report.mutation(test_results, source_file, mutation)
-      IO.puts(mutation_report)
-    end
+    IO.puts(mutation_report)
   end
 
   defp require_test_helper(shell, dir) do

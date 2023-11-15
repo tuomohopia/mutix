@@ -1,4 +1,4 @@
-defmodule Mutix.SourceTestModule do
+defmodule Mutix.MultiOperatorSource do
   def add_one(a) do
     a + 1
   end

@@ -5,7 +5,8 @@ defmodule Mutix.TransformTest do
 
   alias Mutix.Transform
 
-  @source_file "test/support/single_operator_source.ex"
+  @single_source_file "test/support/single_operator_source.ex"
+  @multi_source_file "test/support/multi_operator_source.ex"
 
   describe "mutation_modules/2" do
     @single_operator_transformed """
@@ -15,13 +16,18 @@ defmodule Mutix.TransformTest do
       end
     end
     """
+
     setup do
-      ast = @source_file |> File.read!() |> Code.string_to_quoted!()
-      %{module: ast}
+      [single_ast, multi_ast] =
+        [@single_source_file, @multi_source_file]
+        |> Enum.map(&File.read!/1)
+        |> Enum.map(&Code.string_to_quoted!/1)
+
+      %{single_ast: single_ast, multi_ast: multi_ast}
     end
 
-    test "transforms a single module AST into a list of single order mutation ASTs", %{
-      module: module
+    test "transforms a single operator module AST into a single order mutation AST", %{
+      single_ast: module
     } do
       from = :>
       to = :<

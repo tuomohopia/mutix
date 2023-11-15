@@ -1,5 +1,8 @@
 defmodule Mutix.Transform do
-  @moduledoc false
+  @moduledoc """
+  Transforms a source module AST into mutated ASTs,
+  along with relevant metadata for mutation reporting.
+  """
 
   @doc """
   Takes in a module AST and
@@ -10,12 +13,12 @@ defmodule Mutix.Transform do
   """
   @spec mutation_modules(Macro.t(), {atom(), atom()}) :: list({Keyword.t(), Macro.t()})
   def mutation_modules(module_ast, {from, to}) do
-    # Find all locations [[line: 3], ..] where `from` exists
-    # TODO: multi operator per line support with Macro.update_meta(..)
-    # -> put keyword here from acc, like `index_on_line: 0`
-    {_new_ast, operator_location_metas} =
+    # Find all locations [[line: 3, index_on_line: 0], ..] where `from` exists
+    {new_ast, operator_location_metas} =
       Macro.prewalk(module_ast, [], fn
         {^from, meta, children}, acc ->
+          index_on_line = index_for_line(acc, meta)
+          meta = Keyword.put(meta, :index_on_line, index_on_line)
           {{from, meta, children}, acc ++ [meta]}
 
         other, acc ->
@@ -23,12 +26,8 @@ defmodule Mutix.Transform do
       end)
 
     # Generate a list of new ASTs where every AST is the full module with a single mutation
-
-    # TODO: support for multiple identical operators per line
-    # - pass index to mutate_at_location
-    # - reduce with prewalk/3 and keep tabs with the acc if mutated yet or not
     for meta <- Enum.uniq(operator_location_metas) do
-      mutated_module = mutate_at_location(module_ast, meta, {from, to})
+      mutated_module = mutate_at_location(new_ast, meta, {from, to})
       {meta, mutated_module}
     end
   end
@@ -43,5 +42,13 @@ defmodule Mutix.Transform do
       other ->
         other
     end)
+  end
+
+  defp index_for_line(acc, current_node_meta) do
+    current_line = Keyword.fetch!(current_node_meta, :line)
+
+    acc
+    |> Enum.filter(&(Keyword.fetch!(&1, :line) == current_line))
+    |> Enum.count()
   end
 end

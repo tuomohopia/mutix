@@ -33,10 +33,32 @@ defmodule Mutix.TransformTest do
       to = :<
 
       assert [{meta, mutated_module}] = Transform.mutation_modules(module, {from, to})
-      assert meta == [line: 3]
+      assert Keyword.fetch!(meta, :line) == 3
 
       assert Macro.to_string(mutated_module) ==
                String.trim_trailing(@single_operator_transformed, "\n")
+    end
+
+    test "packs operator's index per line into metadata", %{
+      multi_ast: module
+    } do
+      from = :+
+      to = :-
+
+      metas =
+        module
+        |> Transform.mutation_modules({from, to})
+        |> Enum.map(fn {meta, _ast} -> meta end)
+
+      assert metas == [
+               [index_on_line: 0, line: 3],
+               [index_on_line: 0, line: 7],
+               [index_on_line: 0, line: 11],
+               # 2nd occurence
+               [index_on_line: 1, line: 11],
+               [index_on_line: 0, line: 15],
+               [index_on_line: 0, line: 19]
+             ]
     end
   end
 end

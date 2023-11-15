@@ -1,0 +1,79 @@
+name: "Pull Request → Main"
+
+on:
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  cancel-in-progress: true
+  group: "ci-${{ github.head_ref }}"
+
+jobs:
+  build-test:
+    name: Test Build
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: '0'
+      - name: Load environment variables
+        uses: HatsuneMiku3939/direnv-action@v1
+        with:
+          direnvVersion: 2.32.3
+      - uses: ./.github/actions/build
+        with:
+          target: test
+
+  style:
+    name: Format
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    needs: build-test
+    env:
+      MIX_ENV: test
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: '0'
+      - name: Load environment variables
+        uses: HatsuneMiku3939/direnv-action@v1
+        with:
+          direnvVersion: 2.32.3
+      - uses: ./.github/actions/build
+        with:
+          target: test
+      - name: Run format
+        env:
+          MIX_ENV: test
+        run: mix format --check-formatted --dry-run
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    needs: build-test
+    strategy:
+      fail-fast: false
+    env:
+      MIX_ENV: test
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: '0'
+      - name: Load environment variables
+        uses: HatsuneMiku3939/direnv-action@v1
+        with:
+          direnvVersion: 2.32.3
+      - uses: ./.github/actions/build
+        with:
+          target: test
+      - name: Run Tests
+        run: "mix test --no-deps-check --no-archives-check --no-compile --no-elixir-version-check --preload-modules"

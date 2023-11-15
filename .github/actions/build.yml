@@ -1,0 +1,57 @@
+name: Build
+
+inputs:
+  target:
+    description: MIX_ENV
+    required: true
+    type: string
+  strict:
+    description: Fail on warnings?
+    required: false
+    default: true
+    type: boolean
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Elixir & OTP versions
+      uses: erlef/setup-beam@v1
+      with:
+        elixir-version: "1.15.5"
+        otp-version: "26.0.2"
+        install-hex: true
+        install-rebar: true
+
+    - name: Configure Cache
+      id: cache
+      uses: actions/cache@v3
+      with:
+        path: |
+          deps
+          _build
+        key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-mix-
+    
+    - name: Install dependencies
+      if: ${{ steps.cache.outputs.cache-hit != 'true' }}
+      env:
+        MIX_ENV: ${{ inputs.target }}
+      shell: bash
+      run: |
+        mix deps.get --only $MIX_ENV
+        mix deps.compile
+
+    - name: Compile project
+      if: ${{ inputs.strict != 'true' }}
+      env:
+        MIX_ENV: ${{ inputs.target }}
+      shell: bash
+      run: mix compile
+
+    - name: Compile project
+      if: ${{ inputs.strict == 'true' }}
+      env:
+        MIX_ENV: ${{ inputs.target }}
+      shell: bash
+      run: mix compile --warnings-as-errors

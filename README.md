@@ -1,47 +1,64 @@
-```sh
-iex -S mix test
-```
+# Mutix
 
-Code modules have to be loaded explicitly `run([..])`, because otherwise they're
-already required and will not run.
+> Mutation testing tool for Elixir
+
+Mutix is a mutation testing tool that generates mutations of your source files
+and runs the existing test suite against them.
+
+Generates a mutation report along with a mutation score as the result.
+
+## Installation
+
+Add `:mutix` to your test dependencies in your `mix.exs` file:
 
 ```elixir
-Interactive Elixir (1.15.5) - press Ctrl+C to exit (type h() ENTER for help)
-iex> ExUnit.start(autorun: false)
-:ok
-iex> ExUnit.run([MutixTest])
-....
-Finished in 0.8 seconds (0.00s async, 0.8s sync)
-4 tests, 0 failures
-
-Randomized with seed 957366
-%{total: 4, failures: 0, excluded: 0, skipped: 0}
+def deps do
+  [
+    {:mutix, git: "https://github.com/tuomohopia/mutix.git", only: :test}
+  ]
+end
 ```
 
-May have to run `ExUnit.Server.modules_loaded(false)`.
+Then add `:test` as the preferred `MIX_ENV` for the mix task of `mutix` in your
+`mix.exs` file:
 
-## Compilation
+```elixir
+def project do
+  preferred_cli_env: [
+    mutate: :test
+  ]
+```
 
-- `Code.compile_string(..)` ja `Code.compile_quoted(..)` ylikirjoittaa jo
-  olemassa olevan moduulin päälle
-- use `Macro.to_string()` to convert the quoted, mutated line back to string
+Or optionally
 
-## POC
+```elixir
+def cli do
+    [preferred_envs: [mutate: :test]]
+end
+```
 
-- Input: lib module file path & test file path
-- Creates a mutation of a single + operator to -
-- Runs the test file suite against the mutation, sending records to recorder
-- Repeats the above for every mutation
-- Result:
-  - File & Line changed
-  - how many test failures out of total
-  - Mutation Score
-  - at least 1 test needs to fail for each mutant
-  - Line-by-line analysis which mutant was not caught by any test
+## Usage
 
-### Development steps
+Use dialyxir from the directory of the mix project you want to analyze; a PLT
+file will be created or updated if required and the project will be
+automatically compiled.
 
-### Problems
+```bash
+mix mutate lib/parser.ex
+```
 
-Run ExUnit multiple times:
-https://stackoverflow.com/questions/36926388/how-can-i-avoid-the-warning-redefining-module-foo-when-running-exunit-tests-m
+### Command line options
+
+- `--from` - which target operator to mutate
+- `--to` - which operator should the target operator be mutated to in the source
+  file
+
+### Examples
+
+```bash
+mix mutate lib/parser.ex --from ">" --to "<"
+```
+
+```bash
+mix mutate lib/parser.ex --from and --to not
+```

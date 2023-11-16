@@ -67,10 +67,3 @@ mix mutate lib/parser.ex --from ">" --to "<"
 ```bash
 mix mutate lib/parser.ex --from and --to not
 ```
-
-## Development
-
-TODO:
-
-- [ ] support for detecting multiple operators per line
-- [ ] Test suite

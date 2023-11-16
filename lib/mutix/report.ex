@@ -15,7 +15,8 @@ defmodule Mutix.Report do
   def mutation(test_results, source_file_path, operator_mutation) do
     {from, to} = operator_mutation
     score = mutation_score(test_results)
-    percentage = score.survived_count / score.mutant_count * 100
+
+    percentage = (score.mutant_count - score.survived_count) / score.mutant_count * 100
     survived = score.survived
 
     survived_report =
@@ -32,7 +33,7 @@ defmodule Mutix.Report do
 
         #{score.killed_count} / #{score.mutant_count} mutants killed by the test suite.
 
-        Mutation score: #{percentage} %
+        Mutation score: #{Float.round(percentage, 1)} %
     #{survived_report}
     """
   end

@@ -14,7 +14,7 @@ defmodule Mutix.ReportTest do
 
       0 / 1 mutants killed by the test suite.
 
-      Mutation score: 100.0 %
+      Mutation score: 0.0 %
 
   Surviving mutants (no test failed with these injections):
 
@@ -35,6 +35,22 @@ defmodule Mutix.ReportTest do
 
       result = Report.mutation(test_results, source_file_path, operator_mutation)
       assert result == String.replace_trailing(@single_operator_result, "\n\n\n", "\n\n")
+    end
+
+    test "reports mutation score correctly" do
+      test_results = [
+        {%{total: 5, failures: 0, excluded: 0, skipped: 0}, [index_on_line: 0, line: 3], ""},
+        {%{total: 5, failures: 1, excluded: 0, skipped: 0}, [index_on_line: 0, line: 5], ""},
+        {%{total: 5, failures: 5, excluded: 0, skipped: 0}, [index_on_line: 0, line: 8], ""}
+      ]
+
+      source_file_path = "test/support/single_operator_source.ex"
+      operator_mutation = {:>, :<}
+
+      result = Report.mutation(test_results, source_file_path, operator_mutation)
+      assert result =~ "5 tests were run for each mutant."
+      assert result =~ "2 / 3 mutants killed by the test suite."
+      assert result =~ "Mutation score: 66.7 %"
     end
   end
 end

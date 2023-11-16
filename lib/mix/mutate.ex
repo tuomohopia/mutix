@@ -137,7 +137,7 @@ defmodule Mix.Tasks.Mutate do
   defp do_run(source_file, test_files, mutation) do
     # Get source file's AST
     ast = source_file |> File.read!() |> Code.string_to_quoted!()
-    {:ok, test_modules, []} = Kernel.ParallelCompiler.require(test_files, [])
+    {:ok, test_modules, _compilation_metas} = Kernel.ParallelCompiler.require(test_files, [])
 
     ExUnit.Server.modules_loaded(false)
     # One clean run first to assert all tests pass

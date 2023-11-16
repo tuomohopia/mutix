@@ -83,7 +83,7 @@ defmodule Mix.Tasks.Mutate do
     if source_file_count == 0,
       do:
         Mix.raise(
-          "Please provide path to the source file to mutate, e.g. `mix mutate lib/my_app/transformer.ex`. Other options unsupported at this time."
+          "Please provide path to the source file to mutate, e.g. `mix mutate lib/my_app/transformer.ex`."
         )
 
     if source_file_count > 1,
@@ -96,7 +96,10 @@ defmodule Mix.Tasks.Mutate do
     end
 
     if Mix.Task.recursing?(), do: Mix.raise("Umbrella apps not supported yet.")
-    unless File.exists?(source_file), do: Mix.raise("Source module file must exist.")
+
+    unless File.exists?(source_file),
+      do: Mix.raise("Source module file #{source_file} does not exist.")
+
     _ = Mix.Project.get!()
     project = Mix.Project.config()
 
@@ -137,6 +140,10 @@ defmodule Mix.Tasks.Mutate do
     # One clean run first to assert all tests pass
     ExUnit.CaptureIO.with_io(fn ->
       case ExUnit.run() do
+        %{failures: 0, total: total, excluded: excluded, skipped: skipped}
+        when excluded + skipped == total ->
+          Mix.raise("No tests to run detected. Exited without running a mutation test suite.")
+
         %{failures: 0} ->
           :ok
 

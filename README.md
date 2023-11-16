@@ -14,7 +14,7 @@ Add `:mutix` to your test dependencies in your `mix.exs` file:
 ```elixir
 def deps do
   [
-    {:mutix, git: "https://github.com/tuomohopia/mutix.git", only: :test}
+    {:mutix, git: "https://github.com/tuomohopia/mutix.git", tag: "v0.1.0", only: :test}
   ]
 end
 ```
@@ -67,3 +67,13 @@ mix mutate lib/parser.ex --from ">" --to "<"
 ```bash
 mix mutate lib/parser.ex --from and --to not
 ```
+
+## Caveats
+
+The current version comes with the following caveats:
+
+- **Macros**: Mutates operators even inside macros. This can lead to very
+  confusing results
+- **Single source**: Only mutates a single source file at a time. This is
+  because producing mutations and running the test suite on each one of them is
+  computationally expensive and this is not optimized yet

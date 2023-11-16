@@ -16,12 +16,6 @@ defmodule Mix.Tasks.Mutate do
 
   """
 
-  alias Mutix.Report
-  alias Mutix.Transform
-
-  # TODO:
-  # - add instructions on how to read the test results
-
   @shortdoc "Runs mutation tests for a given file and test suite."
 
   @compile {:no_warn_undefined, [ExUnit, ExUnit.Filters]}
@@ -77,7 +71,7 @@ defmodule Mix.Tasks.Mutate do
     unless from in operators and to in operators,
       do:
         Mix.raise(
-          "Both from and to mutation operators have to be within the allowed operators: #{Enum.join(operators, ", ")}."
+          "Both from and to mutation operators have to be among the allowed operators: #{Enum.join(operators, ", ")}."
         )
 
     operators = {Map.fetch!(@operators, from), Map.fetch!(@operators, to)}
@@ -154,7 +148,7 @@ defmodule Mix.Tasks.Mutate do
     end)
 
     test_results =
-      for {meta, ast} <- Transform.mutation_modules(ast, mutation) do
+      for {meta, ast} <- Mutix.mutation_modules(ast, mutation) do
         Code.compile_quoted(ast)
 
         {result, io_output} =
@@ -177,7 +171,7 @@ defmodule Mix.Tasks.Mutate do
 
         """
       else
-        Report.mutation(test_results, source_file, mutation)
+        Mutix.mutation_report(test_results, source_file, mutation)
       end
 
     IO.puts(mutation_report)

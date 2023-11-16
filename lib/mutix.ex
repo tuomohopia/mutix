@@ -1,21 +1,7 @@
 defmodule Mutix do
-  def add_one(a) do
-    a + 1
-  end
+  alias Mutix.Report
+  alias Mutix.Transform
 
-  def add_two(a) do
-    a + 2
-  end
-
-  def add_two_and_three(a) do
-    a + 2 + 3
-  end
-
-  def non_tested_add(a) do
-    a + 25
-  end
-
-  def non_tested_add_2(a) do
-    a + 25
-  end
+  defdelegate mutation_report(test_results, source_file, mutation), to: Report, as: :mutation
+  defdelegate mutation_modules(ast, mutation), to: Transform
 end

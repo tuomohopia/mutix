@@ -43,14 +43,20 @@ defmodule Mutix.ReportTest do
           operator_mutation
         )
 
-      # 5 tests were..
-      assert result =~ "\e[34m\e[1m5\e[0m tests were run for each mutant"
-      # 2 / 3 mutants killed..
-      assert result =~ "\e[32m2\e[0m / \e[34m\e[1m3\e[0m mutants killed by the test suite."
-      # 66.7 %
-      assert result =~ "Mutation score: \e[32m\e[1m66.7\e[0m %"
-      # Has context
-      assert result =~ "def larger_than_1(a) do"
+      if not IO.ANSI.enabled?() do
+        assert result =~ "5 tests were run for each mutant."
+        assert result =~ "2 / 3 mutants killed by the test suite."
+        assert result =~ "Mutation score: 66.7 %"
+      else
+        # 5 tests were..
+        assert result =~ "\e[34m\e[1m5\e[0m tests were run for each mutant"
+        # 2 / 3 mutants killed..
+        assert result =~ "\e[32m2\e[0m / \e[34m\e[1m3\e[0m mutants killed by the test suite."
+        # 66.7 %
+        assert result =~ "Mutation score: \e[32m\e[1m66.7\e[0m %"
+        # Has context
+        assert result =~ "def larger_than_1(a) do"
+      end
     end
   end
 end

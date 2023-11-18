@@ -83,8 +83,7 @@ defmodule Mutix.Report do
           ]
           |> trim_context()
           |> Enum.map(&String.pad_leading(&1, String.length(&1) + 8))
-          # TODO: color only the operator here, not the entire line
-          |> List.update_at(1, fn line -> color(line, :red) end)
+          |> List.update_at(1, fn line -> highlight_operator(line, from, index) end)
           |> Enum.join("\n")
 
         if index == 0 do
@@ -95,7 +94,7 @@ defmodule Mutix.Report do
           """
         else
           """
-          #{source_file_path} - line #{line} where the #{index + 1}. ( #{color(from, :green)} ) from left was mutated into ( #{color(to, :red)} )
+          #{color(source_file_path, :magenta)}:#{color(line, :magenta)} where the #{index + 1}. ( #{color(from, :green)} ) from left was mutated into ( #{color(to, :red)} )
 
           #{context}
           """
@@ -123,5 +122,17 @@ defmodule Mutix.Report do
       |> Enum.min()
 
     Enum.map(lines, fn line -> String.slice(line, min_whitespace..-1) end)
+  end
+
+  defp highlight_operator(line, from, index) do
+    from = to_string(from)
+    from_ansi = color(from, :green)
+    replace_at = index * 2 + 1
+
+    line
+    |> String.splitter(from)
+    |> Enum.into([])
+    |> Enum.intersperse(from)
+    |> List.replace_at(replace_at, from_ansi)
   end
 end

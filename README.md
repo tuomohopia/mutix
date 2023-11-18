@@ -86,37 +86,37 @@ mix mutate lib/parser.ex --from and --to not
     </text><span style="color: magenta;">test/support/multi_operator_source.ex</span><text>:</text><span style="color: magenta;">3</span><text> where ( </text><span style="color: green;">+</span><text> ) was mutated into ( </text><span style="color: red;">-</span><text> ):
 
         def add_one(a) do
-</text><span style="color: red;">          a + 1</span><text>
+          a </text><span style="color: green;">+</span><text> 1
         end
 
     </text><span style="color: magenta;">test/support/multi_operator_source.ex</span><text>:</text><span style="color: magenta;">7</span><text> where ( </text><span style="color: green;">+</span><text> ) was mutated into ( </text><span style="color: red;">-</span><text> ):
 
         def add_two(a) do
-</text><span style="color: red;">          a + 2</span><text>
+          a </text><span style="color: green;">+</span><text> 2
         end
 
     </text><span style="color: magenta;">test/support/multi_operator_source.ex</span><text>:</text><span style="color: magenta;">11</span><text> where ( </text><span style="color: green;">+</span><text> ) was mutated into ( </text><span style="color: red;">-</span><text> ):
 
         def add_two_and_three(a) do
-</text><span style="color: red;">          a + 2 + 3</span><text>
+          a </text><span style="color: green;">+</span><text> 2 + 3
         end
 
-    test/support/multi_operator_source.ex - line 11 where the 2. ( </text><span style="color: green;">+</span><text> ) from left was mutated into ( </text><span style="color: red;">-</span><text> )
+    </text><span style="color: magenta;">test/support/multi_operator_source.ex</span><text>:</text><span style="color: magenta;">11</span><text> where the 2. ( </text><span style="color: green;">+</span><text> ) from left was mutated into ( </text><span style="color: red;">-</span><text> )
 
         def add_two_and_three(a) do
-</text><span style="color: red;">          a + 2 + 3</span><text>
+          a + 2 </text><span style="color: green;">+</span><text> 3
         end
 
     </text><span style="color: magenta;">test/support/multi_operator_source.ex</span><text>:</text><span style="color: magenta;">15</span><text> where ( </text><span style="color: green;">+</span><text> ) was mutated into ( </text><span style="color: red;">-</span><text> ):
 
         def non_tested_add(a) do
-</text><span style="color: red;">          a + 25</span><text>
+          a </text><span style="color: green;">+</span><text> 25
         end
 
     </text><span style="color: magenta;">test/support/multi_operator_source.ex</span><text>:</text><span style="color: magenta;">19</span><text> where ( </text><span style="color: green;">+</span><text> ) was mutated into ( </text><span style="color: red;">-</span><text> ):
 
         def non_tested_add_2(a) do
-</text><span style="color: red;">          a + 25</span><text>
+          a </text><span style="color: green;">+</span><text> 25
         end
 
 

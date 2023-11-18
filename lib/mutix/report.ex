@@ -89,18 +89,22 @@ defmodule Mutix.Report do
 
         if index == 0 do
           """
-          #{IO.ANSI.format([:magenta, source_file_path])}:#{color(line, :magenta)} where ( #{color(from, :green)} ) was mutated into ( #{color(to, :red)} ):
+          #{color(source_file_path, :magenta)}:#{color(line, :magenta)} where ( #{color(from, :green)} ) was mutated into ( #{color(to, :red)} ):
 
           #{context}
           """
         else
-          "#{source_file_path} - line #{line} where the #{index + 1}. ( #{from} ) from left was mutated into ( #{to} )"
+          """
+          #{source_file_path} - line #{line} where the #{index + 1}. ( #{color(from, :green)} ) from left was mutated into ( #{color(to, :red)} )
+
+          #{context}
+          """
         end
       end
 
     """
 
-    #{IO.ANSI.format([:magenta, :bright, "Surviving mutants"])} - no test failed with these injections:
+    #{color("Surviving mutants", [:magenta, :bright])} - no test failed with these injections:
 
         #{Enum.join(surviving, "\n    ")}
     """

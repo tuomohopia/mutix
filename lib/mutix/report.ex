@@ -68,26 +68,22 @@ defmodule Mutix.Report do
   end
 
   defp survived_report(survived, {source_file_path, source_content}, {from, to}) do
-    lines = to_lines(source_content) |> Enum.map(fn {l, s} -> s end)
-
-    # print_test(source_content)
+    lines = String.split(source_content, "\n")
 
     surviving =
       for {_, meta, _} <- survived do
         line = Keyword.fetch!(meta, :line)
         index = Keyword.fetch!(meta, :index_on_line)
 
-        # TODO: trim all according to the least indented.
         context =
           [
             Enum.at(lines, line - 2),
-            # TODO: find and color the operator here
             Enum.at(lines, line - 1),
             Enum.at(lines, line)
           ]
           |> trim_context()
+          |> List.update_at(1, fn line -> color(line, :red) end)
           |> Enum.join("\n")
-          |> IO.inspect(label: "trimmed context")
 
         if index == 0 do
           """
@@ -105,17 +101,6 @@ defmodule Mutix.Report do
 
         #{Enum.join(surviving, "\n    ")}
     """
-  end
-
-  defp to_lines(source) when is_binary(source) do
-    source
-    |> String.split("\n")
-    |> Enum.with_index(1)
-    |> Enum.map(fn {line, i} -> {i, line} end)
-  end
-
-  defp line_at(lines, line_number) when is_list(lines) do
-    # Enum.at(lines, )
   end
 
   defp color(value, ansi), do: IO.ANSI.format([ansi | to_string(value)])

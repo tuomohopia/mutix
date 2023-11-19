@@ -41,9 +41,7 @@ end
 
 ## Usage
 
-Use dialyxir from the directory of the mix project you want to analyze; a PLT
-file will be created or updated if required and the project will be
-automatically compiled.
+The mix task takes a source file to mutate as the required parameter.
 
 ```bash
 mix mutate lib/parser.ex

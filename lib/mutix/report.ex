@@ -1,15 +1,8 @@
 defmodule Mutix.Report do
   @moduledoc false
 
-  @typep exunit_test_result :: %{
-           total: non_neg_integer(),
-           failures: non_neg_integer(),
-           excluded: non_neg_integer(),
-           skipped: non_neg_integer()
-         }
-
   @typep mutation_test_result ::
-           {result :: exunit_test_result(), meta :: Keyword.t(), io_output :: String.t()}
+           {result :: ExUnit.suite_result(), meta :: Keyword.t(), io_output :: String.t()}
 
   @spec mutation(list(mutation_test_result()), {String.t(), String.t()}, {atom(), atom()}) ::
           String.t()
